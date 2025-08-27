@@ -18,3 +18,14 @@ Mesh::Mesh(
 
     LOG_INFO(L"MeshBuffer -> Buffers created successfully.");
 }
+
+void Mesh::draw(ID3D12GraphicsCommandList* cmdList) {
+    auto vbView = vertex->getView();
+    auto ibView = index->getView();
+    auto indexCount = index->getCount();
+    
+    cmdList->IASetVertexBuffers(0, 1, &vbView);
+    cmdList->IASetIndexBuffer(&ibView);
+    cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    cmdList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+}

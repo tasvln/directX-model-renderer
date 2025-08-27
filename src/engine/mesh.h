@@ -19,6 +19,8 @@ class Mesh {
             return index.get();
         }   
 
+        void draw(ID3D12GraphicsCommandList* cmdList);
+
     private:
         std::unique_ptr<VertexBuffer> vertex;
         std::unique_ptr<IndexBuffer> index;

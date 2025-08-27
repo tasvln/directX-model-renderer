@@ -96,9 +96,20 @@ struct CameraConfig {
     float farZ;
 };
 
+// struct alignas(16) VertexStruct {
+//     DirectX::XMFLOAT3 position;   // 12 (GPU padded to 16)
+//     DirectX::XMFLOAT3 normal;     // 12 (padded to 16)
+//     DirectX::XMFLOAT3 tangent;    // 12 (padded to 16)
+//     DirectX::XMFLOAT2 texcoord;   // 8
+//     DirectX::XMFLOAT4 color;      // 16
+// };
+
 struct alignas(16) VertexStruct {
     DirectX::XMFLOAT4 position;
-    DirectX::XMFLOAT4 color;
+    DirectX::XMFLOAT3 normal;
+    DirectX::XMFLOAT3 tangent;
+    DirectX::XMFLOAT2 texcoord;
+    // DirectX::XMFLOAT4 color;
 };
 
 struct alignas(256) ConstantMVP

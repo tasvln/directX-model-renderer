@@ -9,6 +9,7 @@
 #include "engine/shader.h"
 #include "engine/pipeline.h"
 #include "engine/scene/camera.h"
+#include "engine/model.h"
 
 #include "utils/events.h"
 #include "utils/frame_timer.h"
@@ -82,35 +83,34 @@ void Application::init() {
     LOG_INFO(L"Application Class initialized!");
     LOG_INFO(L"-- Resources --");
 
-    std::vector<VertexStruct> vertices = {
-        { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
-        { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
-        { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
-        { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
-        { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
-        { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
-        { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
-        { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
-    };
+    // std::vector<VertexStruct> vertices = {
+    //     { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
+    //     { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
+    //     { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
+    //     { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
+    //     { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
+    //     { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
+    //     { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
+    //     { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
+    // };
 
-    // 36 indices for cube (12 triangles)
-    std::vector<uint32_t> indices =
-    {
-        0, 1, 2, 0, 2, 3,
-        4, 6, 5, 4, 7, 6,
-        4, 5, 1, 4, 1, 0,
-        3, 2, 6, 3, 6, 7,
-        1, 5, 6, 1, 6, 2,
-        4, 0, 3, 4, 3, 7
-    };
+    // // 36 indices for cube (12 triangles)
+    // std::vector<uint32_t> indices =
+    // {
+    //     0, 1, 2, 0, 2, 3,
+    //     4, 6, 5, 4, 7, 6,
+    //     4, 5, 1, 4, 1, 0,
+    //     3, 2, 6, 3, 6, 7,
+    //     1, 5, 6, 1, 6, 2,
+    //     4, 0, 3, 4, 3, 7
+    // };
 
     // create buffers
-    mesh = std::make_unique<Mesh>(
+    model = std::make_unique<Model>(
         device->getDevice(),
-        vertices,
-        indices
+        "assets/models/cat/cat.obj"
     );
-    LOG_INFO(L"Mesh Resource initialized!");
+    LOG_INFO(L"Model Resource initialized!");
 
     // mvpBuffer?
     constantBuffer1 = std::make_unique<ConstantBuffer>(
@@ -134,15 +134,16 @@ void Application::init() {
 
     // pipeline
     // Root parameter for CBV
-    // CD3DX12_ROOT_PARAMETER cbvRootParam;
-    // cbvRootParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
     CD3DX12_ROOT_PARAMETER cbvRootParam;
     cbvRootParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TANGENT",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        // { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
 
     std::vector<D3D12_ROOT_PARAMETER> rootParams = { cbvRootParam };
@@ -150,7 +151,7 @@ void Application::init() {
     auto vertexShader = Shader(L"assets/shaders/vertex.cso");
     auto pixelShader = Shader(L"assets/shaders/pixel.cso");
 
-    std::vector<D3D12_STATIC_SAMPLER_DESC> samplers{};
+    std::vector<D3D12_STATIC_SAMPLER_DESC> samplers {};
 
     pipeline1 = std::make_unique<Pipeline>(
         device->getDevice(),
@@ -228,8 +229,6 @@ void Application::onRender(RenderEventArgs& args)
     auto rootSignature = pipeline1->getRootSignature();
     auto rtvHeap = swapchain->getRTVHeap();
     auto dsvHeap = swapchain->getDSVHeap();
-    auto vertex = mesh->getVertex();
-    auto index = mesh->getIndex();
     auto vsync = device->getSupportTearingState();
 
     // Reset command list with current pipeline
@@ -262,11 +261,9 @@ void Application::onRender(RenderEventArgs& args)
 
     // Draw the cube
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    auto vbView = vertex->getView();
-    auto ibView = index->getView();
-    commandList->IASetVertexBuffers(0, 1, &vbView);
-    commandList->IASetIndexBuffer(&ibView);
-    commandList->DrawIndexedInstanced(index->getCount(), 1, 0, 0, 0);
+    
+    // call mesh/model draw
+    model->draw(commandList.Get());
 
     // Transition back buffer to present
     transitionResource(commandList, backBuffer.Get(),
@@ -372,9 +369,9 @@ void Application::cleanUp() {
     }
 
     // Reset resources in reverse creation order
-    if (mesh) {
-        mesh.reset();
-        LOG_INFO(L"Mesh released.");
+    if (model) {
+        model.reset();
+        LOG_INFO(L"Model released.");
     }
 
     if (constantBuffer1) {

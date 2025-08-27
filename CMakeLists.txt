@@ -30,6 +30,7 @@ add_executable(
 )
 
 find_package(directx-headers CONFIG REQUIRED)
+find_package(assimp CONFIG REQUIRED)
 
 # Link Windows libraries
 target_link_libraries(
@@ -42,6 +43,7 @@ target_link_libraries(
         dxguid
         d3dcompiler # Shader compiler
         Microsoft::DirectX-Headers
+        assimp::assimp
 )
 
 # Define UNICODE
@@ -59,4 +61,9 @@ add_custom_command(
     TARGET DIRECTX3D POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets/shaders/bin $<TARGET_FILE_DIR:DIRECTX3D>/assets/shaders
+)
+add_custom_command(
+    TARGET DIRECTX3D POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets/models $<TARGET_FILE_DIR:DIRECTX3D>/assets/models
 )

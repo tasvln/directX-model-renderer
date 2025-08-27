@@ -6,7 +6,7 @@ class Window;
 class Device;
 class CommandQueue;
 class Swapchain;
-class Mesh;
+class Model;
 class ConstantBuffer;
 class Pipeline;
 class Camera;
@@ -63,7 +63,7 @@ class Application
         // std::unique_ptr<CommandQueue> computeCommandQueue;
         // std::unique_ptr<CommandQueue> copyCommandQueue;
         std::unique_ptr<Swapchain> swapchain;
-        std::unique_ptr<Mesh> mesh;
+        std::unique_ptr<Model> model;
         std::unique_ptr<ConstantBuffer> constantBuffer1;
         std::unique_ptr<Pipeline> pipeline1;
         std::unique_ptr<Camera> camera1;
