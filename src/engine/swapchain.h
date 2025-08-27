@@ -46,6 +46,10 @@ class Swapchain {
         DescriptorHeap* getDSVHeap() const {
             return dsvHeap.get();
         }
+        
+        DescriptorHeap* getCbvSrvUavHeapHeap() const {
+            return cbvSrvUavHeap.get();
+        }
 
     private:
         void createRTVs(); // render target views -> yes that's what it means :)
@@ -62,5 +66,6 @@ class Swapchain {
 
         std::unique_ptr<DescriptorHeap> rtvHeap;
         std::unique_ptr<DescriptorHeap> dsvHeap;
+        std::unique_ptr<DescriptorHeap> cbvSrvUavHeap;
         
 };

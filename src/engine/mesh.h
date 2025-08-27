@@ -2,6 +2,7 @@
 
 #include "resources/vertex.h"
 #include "resources/index.h"
+#include "resources/texture.h"
 
 class Mesh {
     public:
@@ -15,6 +16,7 @@ class Mesh {
         VertexBuffer* getVertex() const {
             return vertex.get();
         }   
+
         IndexBuffer* getIndex() const {
             return index.get();
         }   
