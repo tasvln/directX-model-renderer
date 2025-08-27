@@ -109,7 +109,6 @@ struct alignas(16) VertexStruct {
     DirectX::XMFLOAT3 normal;
     DirectX::XMFLOAT3 tangent;
     DirectX::XMFLOAT2 texcoord;
-    // DirectX::XMFLOAT4 color;
 };
 
 struct alignas(256) ConstantMVP

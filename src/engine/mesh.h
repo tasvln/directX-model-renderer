@@ -1,7 +1,7 @@
 #pragma once
 
-#include "buffer/vertex.h"
-#include "buffer/index.h"
+#include "resources/vertex.h"
+#include "resources/index.h"
 
 class Mesh {
     public:

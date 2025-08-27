@@ -5,7 +5,7 @@
 #include "engine/command_queue.h"
 #include "engine/swapchain.h"
 #include "engine/mesh.h"
-#include "engine/buffer/constant.h"
+#include "engine/resources/constant.h"
 #include "engine/shader.h"
 #include "engine/pipeline.h"
 #include "engine/scene/camera.h"
@@ -83,32 +83,12 @@ void Application::init() {
     LOG_INFO(L"Application Class initialized!");
     LOG_INFO(L"-- Resources --");
 
-    // std::vector<VertexStruct> vertices = {
-    //     { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
-    //     { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
-    //     { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
-    //     { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
-    //     { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
-    //     { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
-    //     { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
-    //     { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
-    // };
-
-    // // 36 indices for cube (12 triangles)
-    // std::vector<uint32_t> indices =
-    // {
-    //     0, 1, 2, 0, 2, 3,
-    //     4, 6, 5, 4, 7, 6,
-    //     4, 5, 1, 4, 1, 0,
-    //     3, 2, 6, 3, 6, 7,
-    //     1, 5, 6, 1, 6, 2,
-    //     4, 0, 3, 4, 3, 7
-    // };
-
     // create buffers
     model = std::make_unique<Model>(
         device->getDevice(),
-        "assets/models/cat/cat.obj"
+        // "assets/models/building1/building.obj"
+        // "assets/models/cat/cat.obj"
+        "assets/models/mountain1/mountain.obj"
     );
     LOG_INFO(L"Model Resource initialized!");
 
@@ -119,18 +99,19 @@ void Application::init() {
     );
     LOG_INFO(L"ConstantBuffer1 Resource initialized!");
 
+    auto modelCenter = model->getBoundingCenter();
+    auto modelRadius = model->getBoundingRadius();
+
     camera1 = std::make_unique<Camera>(
         45.0f,
         static_cast<float>(config.width) / static_cast<float>(config.height),
         0.1f,
-        100.0f
+        modelRadius * 10.0f
     );
     LOG_INFO(L"Camera initialized!");
 
-    XMMATRIX view = camera1->getViewMatrix();
-    XMMATRIX proj = camera1->getProjectionMatrix();
-    LOG_INFO(L"Camera View matrix[0][0]: %f", view.r[0].m128_f32[0]);
-    LOG_INFO(L"Camera Projection matrix[0][0]: %f", proj.r[0].m128_f32[0]);
+    // camera1->setTarget(model->getBoundingCenter(), model->getBoundingRadius());
+    camera1->frameModel(modelCenter, modelRadius);
 
     // pipeline
     // Root parameter for CBV
@@ -343,20 +324,28 @@ void Application::onResize(ResizeEventArgs& args)
 
 void Application::onMouseWheel(MouseWheelEventArgs& args)
 {
-    // the zoom could be smoother in my opinion but it'd evolve over time...
     if (args.control) {
-        // Ctrl + wheel → lens zoom (FOV)
-        camera1->setFov(camera1->getFov() - args.wheelDelta * 0.05f);
+        camera1->zoom(args.wheelDelta * 0.1f); // radius zoom
     } else {
-        // Normal wheel → dolly zoom (radius)
-        camera1->zoom(args.wheelDelta * 0.25f);
+        camera1->setFov(camera1->getFov() - args.wheelDelta * 0.02f); // slow FOV change
     }
 }
 
 void Application::onMouseMoved(MouseMotionEventArgs& args) {
     if (args.leftButton)
-    {
-        camera1->orbit(args.relX * 0.01f, args.relY * 0.01f);
+    { 
+        if (args.shift) 
+        {
+            camera1->pan(
+                static_cast<float>(args.relX), 
+                static_cast<float>(args.relY)
+            );
+        } else {
+            camera1->orbit(
+                static_cast<float>(args.relX) * 0.01f, 
+                static_cast<float>(args.relY) * 0.01f
+            );
+        }
     }
 }
 

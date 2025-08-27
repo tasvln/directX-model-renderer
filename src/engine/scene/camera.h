@@ -10,18 +10,21 @@ public:
         float nearZ, 
         float farZ
     );
-    
     ~Camera() = default;
 
-    void setPosition(const XMFLOAT3& pos) { 
-        position = pos; 
-        updateViewMatrix();
-    }
+    void update(float delta);
 
-    void setTarget(const XMFLOAT3& tgt) { 
-        target = tgt; 
-        updateViewMatrix();
-    }
+    // Orbit
+    void orbit(float deltaYaw, float deltaPitch);
+
+    // onMouseWheel -> zoom controlas
+    void setFov(float newFov);
+    void zoom(float wheelDelta);
+
+    // Pan
+    void pan(float deltaX, float deltaY);
+
+    void frameModel(const XMFLOAT3& center, float radius);
 
     void setProjection(
         float fov, 
@@ -29,16 +32,6 @@ public:
         float nearZ, 
         float farZ
     );
-
-    void update(float delta);
-
-    // Orbit
-    void updatePositionFromOrbit();
-    void orbit(float deltaYaw, float deltaPitch);
-
-    // onMouseWheel
-    void setFov(float newFov);
-    void zoom(float wheelDelta);
 
     XMMATRIX getViewMatrix() const { 
         return view; 
@@ -56,8 +49,13 @@ public:
         return fov; 
     }
 
+    float getRadius() const { 
+        return radius; 
+    }
+
 private:
     void updateViewMatrix();
+    void updatePositionFromOrbit();
 
 private:
     float fov;
@@ -67,10 +65,16 @@ private:
 
     float yaw = 0.0f; // left/right angle around the Y-axis
     float pitch = 0.0f; // up/down angle
-    float radius = 5.0f; // distance from target (how far the camera is)
+    
+    float radius = 20.0f; // distance from target (how far the camera is)
+    float targetRadius = 20.0f;
+
+    float minRadius = 1.0f;
+    float maxRadius = 100.0f;
 
     XMFLOAT3 position;
     XMFLOAT3 target;
+    
     XMMATRIX projection;
     XMMATRIX view;
 };
