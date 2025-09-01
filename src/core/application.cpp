@@ -86,6 +86,8 @@ void Application::init() {
     // create buffers
     model = std::make_unique<Model>(
         device->getDevice(),
+        directCommandQueue->getCommandList(),
+        swapchain->getSRVHeap(),
         // "assets/models/building1/building.obj"
         // "assets/models/cat/cat.obj"
         "assets/models/mountain1/mountain.obj"
@@ -114,25 +116,42 @@ void Application::init() {
     camera1->frameModel(modelCenter, modelRadius);
 
     // pipeline
-    // Root parameter for CBV
+    // Root parameters: TODO: make it dynamic?
 
+    // CBV Root Param -> MVP = 0
     CD3DX12_ROOT_PARAMETER cbvRootParam;
     cbvRootParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
+
+    // SRV Root Param -> Texture = 1
+    CD3DX12_DESCRIPTOR_RANGE srvRange;
+    srvRange.Init(
+        D3D12_DESCRIPTOR_RANGE_TYPE_SRV, // type: SRV (shader resource view)
+        1, 
+        0 
+    ); // 1 SRV at t0
+
+    CD3DX12_ROOT_PARAMETER srvRootParam;
+    srvRootParam.InitAsDescriptorTable(
+        1,
+        &srvRange, 
+        D3D12_SHADER_VISIBILITY_PIXEL
+    );
+
+    std::vector<D3D12_ROOT_PARAMETER> rootParams = { cbvRootParam, srvRootParam };
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "TANGENT",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        // { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
-
-    std::vector<D3D12_ROOT_PARAMETER> rootParams = { cbvRootParam };
 
     auto vertexShader = Shader(L"assets/shaders/vertex.cso");
     auto pixelShader = Shader(L"assets/shaders/pixel.cso");
 
-    std::vector<D3D12_STATIC_SAMPLER_DESC> samplers {};
+    auto defaultSampler = pipeline1->getDefaultStaticSampler();
+
+    std::vector<D3D12_STATIC_SAMPLER_DESC> samplers { defaultSampler };
 
     pipeline1 = std::make_unique<Pipeline>(
         device->getDevice(),
@@ -202,22 +221,29 @@ void Application::onUpdate(UpdateEventArgs& args)
 
 void Application::onRender(RenderEventArgs& args)
 {
+    LOG_INFO(L"Application -> Rendering frame...");
+
     // Get a command list from the queue; allocator is managed internally
     auto commandList = directCommandQueue->getCommandList();
+    LOG_INFO(L"Application -> CommandList acquired.");
+
     auto commandQueue = directCommandQueue->getCommandQueue();
 
     auto pipelineState = pipeline1->getPipelineState();
     auto rootSignature = pipeline1->getRootSignature();
     auto rtvHeap = swapchain->getRTVHeap();
     auto dsvHeap = swapchain->getDSVHeap();
+    auto srvHeap = swapchain->getSRVHeap();
     auto vsync = device->getSupportTearingState();
 
     // Reset command list with current pipeline
     commandList->SetPipelineState(pipelineState.Get());
     commandList->SetGraphicsRootSignature(rootSignature.Get());
+    LOG_INFO(L"Application -> Pipeline state and root signature set.");
 
     // Set constant buffer (MVP updated in onUpdate)
     commandList->SetGraphicsRootConstantBufferView(0, constantBuffer1->getGPUAddress());
+    LOG_INFO(L"Application -> Constant buffer bound.");
 
     // Set viewport and scissor
     commandList->RSSetViewports(1, &viewport);
@@ -228,6 +254,7 @@ void Application::onRender(RenderEventArgs& args)
     transitionResource(commandList, backBuffer.Get(),
                        D3D12_RESOURCE_STATE_PRESENT,
                        D3D12_RESOURCE_STATE_RENDER_TARGET);
+    LOG_INFO(L"Application -> Back buffer transitioned to RENDER_TARGET.");
 
     // Set render target and depth-stencil
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvHeap->getHeap()->GetCPUDescriptorHandleForHeapStart(),
@@ -239,30 +266,41 @@ void Application::onRender(RenderEventArgs& args)
     const float clearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
     commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+    LOG_INFO(L"Application -> Render target and depth-stencil cleared.");
 
-    // Draw the cube
+    // Draw the Model
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    
+    LOG_INFO(L"Application -> Primitive topology set to TRIANGLELIST.");
+
     // call mesh/model draw
-    model->draw(commandList.Get());
+    model->draw(
+        commandList.Get(),
+        srvHeap->getHeap().Get(),
+        1 // Root parameter index for the SRV (t0)
+    );
+    LOG_INFO(L"Application -> Model drawn.");
 
     // Transition back buffer to present
     transitionResource(commandList, backBuffer.Get(),
                        D3D12_RESOURCE_STATE_RENDER_TARGET,
                        D3D12_RESOURCE_STATE_PRESENT);
+    LOG_INFO(L"Application -> Back buffer transitioned to PRESENT.");
 
     // Execute command list
     fenceValues[currentBackBufferIndex] = directCommandQueue->executeCommandList(commandList);
+    LOG_INFO(L"Application -> CommandList executed.");
 
     // Present
     INT syncInterval = vsync ? 1 : 0;
     UINT presentFlags = !vsync ? DXGI_PRESENT_ALLOW_TEARING : 0;
     throwFailed(swapchain->getSwapchain()->Present(syncInterval, presentFlags));
+    LOG_INFO(L"Application -> Frame presented.");
 
     currentBackBufferIndex = swapchain->getSwapchain()->GetCurrentBackBufferIndex();
 
     // Wait for GPU to finish frame
     directCommandQueue->fenceWait(fenceValues[currentBackBufferIndex]);
+    LOG_INFO(L"Application -> GPU finished frame.");
 }
 
 void Application::transitionResource(

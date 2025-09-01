@@ -47,8 +47,8 @@ class Swapchain {
             return dsvHeap.get();
         }
         
-        DescriptorHeap* getCbvSrvUavHeapHeap() const {
-            return cbvSrvUavHeap.get();
+        DescriptorHeap* getSRVHeap() const {
+            return srvHeap.get();
         }
 
     private:
@@ -66,6 +66,6 @@ class Swapchain {
 
         std::unique_ptr<DescriptorHeap> rtvHeap;
         std::unique_ptr<DescriptorHeap> dsvHeap;
-        std::unique_ptr<DescriptorHeap> cbvSrvUavHeap;
-        
+
+        std::unique_ptr<DescriptorHeap> srvHeap;
 };

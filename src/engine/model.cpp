@@ -1,16 +1,32 @@
+#pragma once
+
 #include "model.h"
 #include "mesh.h"
+#include "descriptor_heap.h"
 
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 
+namespace fs = std::filesystem;
+
 Model::Model(
-    ComPtr<ID3D12Device2> device,
+    ComPtr<ID3D12Device2> device, 
+    ComPtr<ID3D12GraphicsCommandList> cmdList, 
+    DescriptorHeap* srvHeap, 
     const std::string& path
 ) :
-    device(device)
+    device(device), 
+    cmdList(cmdList), 
+    srvHeap(srvHeap)
 {
+    // store model folder for resolving relative texture paths
+    try {
+        directory = fs::path(path).parent_path().string();
+    } catch (...) {
+        directory.clear();
+    }
+
     loadModel(path);
 }
 
@@ -81,16 +97,19 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     LOG_INFO(L"Model -> Processing mesh: %hs, Vertices: %u, Faces: %u",
         mesh->mName.C_Str(),
         mesh->mNumVertices,
-        mesh->mNumFaces);
+        mesh->mNumFaces
+    );
 
     std::vector<VertexStruct> vertices;
     std::vector<uint32_t> indices;
 
     vertices.reserve(mesh->mNumVertices);
+    indices.reserve(mesh->mNumFaces * 3); // all faces are triangles
 
     XMFLOAT3 minPos = { FLT_MAX,  FLT_MAX,  FLT_MAX };
     XMFLOAT3 maxPos = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
 
+    // Process vertices
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         VertexStruct vertex{};
 
@@ -101,15 +120,6 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
             mesh->mVertices[i].z,
             1.0f
         };
-
-        // Update local bounds
-        minPos.x = std::min(minPos.x, mesh->mVertices[i].x);
-        minPos.y = std::min(minPos.y, mesh->mVertices[i].y);
-        minPos.z = std::min(minPos.z, mesh->mVertices[i].z);
-
-        maxPos.x = std::max(maxPos.x, mesh->mVertices[i].x);
-        maxPos.y = std::max(maxPos.y, mesh->mVertices[i].y);
-        maxPos.z = std::max(maxPos.z, mesh->mVertices[i].z);
 
         // Normal
         if (mesh->HasNormals()) {
@@ -129,15 +139,33 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
             };
         }
 
-        // Texcoord (only first set for now)
+        // Texcoord (first set)
         if (mesh->mTextureCoords[0]) {
             vertex.texcoord = {
                 mesh->mTextureCoords[0][i].x,
                 mesh->mTextureCoords[0][i].y
             };
+        } else {
+            vertex.texcoord = { 0.0f, 0.0f };
         }
 
         vertices.push_back(vertex);
+
+        // Update local bounds
+        minPos.x = std::min(minPos.x, mesh->mVertices[i].x);
+        minPos.y = std::min(minPos.y, mesh->mVertices[i].y);
+        minPos.z = std::min(minPos.z, mesh->mVertices[i].z);
+
+        maxPos.x = std::max(maxPos.x, mesh->mVertices[i].x);
+        maxPos.y = std::max(maxPos.y, mesh->mVertices[i].y);
+        maxPos.z = std::max(maxPos.z, mesh->mVertices[i].z);
+    }
+
+    // Indices
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+        aiFace face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < face.mNumIndices; j++)
+            indices.push_back(face.mIndices[j]);
     }
 
     // Update global bounds
@@ -149,21 +177,86 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     globalMax.y = std::max(globalMax.y, maxPos.y);
     globalMax.z = std::max(globalMax.z, maxPos.z);
 
-    // Indices
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-        aiFace face = mesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; j++)
-            indices.push_back(face.mIndices[j]);
+    LOG_DEBUG(
+        L"Model -> Mesh processed. Final vertex count: %zu, index count: %zu",
+        vertices.size(), indices.size()
+    );
+
+    // Create material if the mesh has a diffuse or base color texture
+    Texture* texForMesh = nullptr;
+
+    if (mesh->mMaterialIndex >= 0) {
+        aiMaterial* aimat = scene->mMaterials[mesh->mMaterialIndex];
+        aiString texPath;
+
+        if ((aimat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 && 
+             aimat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS) ||
+            (aimat->GetTextureCount(aiTextureType_DIFFUSE) > 0 && 
+             aimat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS)) {
+            
+            std::string texStr(texPath.C_Str());
+            if (!texStr.empty()) {
+                std::wstring wpath = resolveTexturePath(texStr);
+                textures.push_back(std::make_unique<Texture>(
+                    device, cmdList, srvHeap, wpath, nextDescriptorIndex++
+                ));
+                texForMesh = textures.back().get();
+            }
+        }
     }
 
-    LOG_DEBUG(L"Model -> Mesh processed. Final vertex count: %zu, index count: %zu",
-        vertices.size(), indices.size());
+    if (!texForMesh) {
+        if (!whiteTexture) whiteTexture = makeWhiteFallbackTexture();
+        texForMesh = whiteTexture;
+    }
 
-    return std::make_unique<Mesh>(device, vertices, indices);
+    materials.push_back(std::make_unique<Material>(texForMesh));
+    Material* matPtr = materials.back().get();
+
+    return std::make_unique<Mesh>(device, vertices, indices, matPtr);
 }
 
-void Model::draw(ID3D12GraphicsCommandList* cmdList) {
-    for (auto& mesh : meshes) {
-        mesh->draw(cmdList);
+// void Model::draw(
+//     ID3D12GraphicsCommandList* cmdList,
+//     ID3D12DescriptorHeap* srvHeap,
+//     UINT rootIndex
+// ) {
+//     // Set descriptor heap ONCE
+//     ID3D12DescriptorHeap* heaps[] = { srvHeap };
+//     cmdList->SetDescriptorHeaps(1, heaps);
+
+//     for (auto& mesh : meshes) {
+//         mesh->draw(cmdList, rootIndex); 
+//     }
+// }
+
+void Model::draw(
+    ID3D12GraphicsCommandList* cmdList,
+    ID3D12DescriptorHeap* srvHeap,
+    UINT rootIndex
+) {
+    LOG_INFO(L"[Model] Drawing %zu meshes", meshes.size());
+
+    // Set descriptor heap once
+    ID3D12DescriptorHeap* heaps[] = { srvHeap };
+    cmdList->SetDescriptorHeaps(1, heaps);
+
+    for (size_t i = 0; i < meshes.size(); ++i) {
+        LOG_INFO(L"[Model] Drawing mesh %zu/%zu", i + 1, meshes.size());
+        meshes[i]->draw(cmdList, rootIndex);
     }
+}
+
+std::wstring Model::resolveTexturePath(const std::string& texRel) const {
+    fs::path p(texRel);
+    if (p.is_absolute()) 
+        return p.wstring();  // use .wstring() to get a wstring
+
+    return (fs::path(directory) / p).wstring(); // combine and convert
+}
+
+Texture* Model::makeWhiteFallbackTexture() {
+    std::wstring whitePath = DEFAULT_WHITE_TEXTURE; // path to your 1x1 white texture
+    textures.push_back(std::make_unique<Texture>(device, cmdList, srvHeap, whitePath, nextDescriptorIndex++));
+    return textures.back().get();
 }

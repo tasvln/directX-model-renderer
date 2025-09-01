@@ -31,6 +31,7 @@ add_executable(
 
 find_package(directx-headers CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
+find_package(directxtex CONFIG REQUIRED)
 
 # Link Windows libraries
 target_link_libraries(
@@ -44,6 +45,7 @@ target_link_libraries(
         d3dcompiler # Shader compiler
         Microsoft::DirectX-Headers
         assimp::assimp
+        Microsoft::DirectXTex
 )
 
 # Define UNICODE

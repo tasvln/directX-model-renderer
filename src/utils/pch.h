@@ -39,6 +39,8 @@
 
 #include <directx/d3dx12.h>
 
+#include <DirectXTex.h>
+
 #include <iostream>
 #include <algorithm>
 #include <cassert>
@@ -122,3 +124,6 @@ inline void throwFailed(HRESULT hr) {
         throw std::runtime_error("HRESULT failed");
     }
 }
+
+constexpr wchar_t DEFAULT_WHITE_TEXTURE[] = L"assets/textures/white.bmp";
+

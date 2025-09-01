@@ -26,9 +26,9 @@ PixelInputType vsmain(VertexInputType input)
     output.position = mul(input.position, mvp);
 
     // Pass through data for pixel shader
-    output.normal   = input.normal;
-    output.tangent  = input.tangent;
-    output.uv       = input.uv;
+    output.normal = input.normal;
+    output.tangent = input.tangent;
+    output.uv = input.uv;
 
     return output;
 }
