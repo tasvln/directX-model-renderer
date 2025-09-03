@@ -26,7 +26,7 @@ Swapchain::Swapchain(
     srvHeap = std::make_unique<DescriptorHeap>(
         device,
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-        100,  // max textures/materials you plan to use
+        10000,  // max textures/materials you plan to use
         true  // shader visible
     );
 

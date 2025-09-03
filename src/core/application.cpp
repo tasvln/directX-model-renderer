@@ -86,11 +86,11 @@ void Application::init() {
     // create buffers
     model = std::make_unique<Model>(
         device->getDevice(),
-        directCommandQueue->getCommandList(),
+        directCommandQueue.get(),
         swapchain->getSRVHeap(),
-        // "assets/models/building1/building.obj"
+        "assets/models/building1/building.obj"
         // "assets/models/cat/cat.obj"
-        "assets/models/mountain1/mountain.obj"
+        // "assets/models/mountain1/mountain.obj"
     );
     LOG_INFO(L"Model Resource initialized!");
 
@@ -149,9 +149,23 @@ void Application::init() {
     auto vertexShader = Shader(L"assets/shaders/vertex.cso");
     auto pixelShader = Shader(L"assets/shaders/pixel.cso");
 
-    auto defaultSampler = pipeline1->getDefaultStaticSampler();
+    
+    D3D12_STATIC_SAMPLER_DESC sampler = {};
+    sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    sampler.MipLODBias = 0.0f;
+    sampler.MaxAnisotropy = 1;
+    sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+    sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+    sampler.MinLOD = 0.0f;
+    sampler.MaxLOD = D3D12_FLOAT32_MAX;
+    sampler.ShaderRegister = 0; // s0
+    sampler.RegisterSpace = 0;
+    sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-    std::vector<D3D12_STATIC_SAMPLER_DESC> samplers { defaultSampler };
+    std::vector<D3D12_STATIC_SAMPLER_DESC> samplers { sampler };
 
     pipeline1 = std::make_unique<Pipeline>(
         device->getDevice(),

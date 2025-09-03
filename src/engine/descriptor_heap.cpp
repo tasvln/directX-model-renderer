@@ -24,8 +24,9 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::getCPUHandle(UINT index) const {
     return handle;
 }
 
-CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::getGPUHandle(UINT index) const {
-    CD3DX12_GPU_DESCRIPTOR_HANDLE handle(heap->GetGPUDescriptorHandleForHeapStart());
-    handle.Offset(index, descriptorSize);
+D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::getGPUHandle(UINT index) const {
+    auto handle = heap->GetGPUDescriptorHandleForHeapStart();
+    handle.ptr += static_cast<SIZE_T>(index) * descriptorSize;
     return handle;
 }
+

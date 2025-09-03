@@ -7,11 +7,12 @@ class Texture;
 class Material
 {
     public:
-        Material(Texture* tex);
+        Material(std::shared_ptr<Texture> tex) : texture(tex) {}
+        
         ~Material() = default;
 
         void bind(ID3D12GraphicsCommandList* cmdList, UINT rootIndex);
 
     private:
-        Texture* texture;
+        std::shared_ptr<Texture> texture;
 };

@@ -12,7 +12,7 @@ class DescriptorHeap {
         );
 
         CD3DX12_CPU_DESCRIPTOR_HANDLE getCPUHandle(UINT index) const;
-        CD3DX12_GPU_DESCRIPTOR_HANDLE getGPUHandle(UINT index) const;
+        D3D12_GPU_DESCRIPTOR_HANDLE getGPUHandle(UINT index) const;
 
         ComPtr<ID3D12DescriptorHeap> getHeap() const { 
             return heap; 

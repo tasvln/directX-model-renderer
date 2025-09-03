@@ -12,7 +12,7 @@ class Mesh {
             ComPtr<ID3D12Device2> device, 
             const std::vector<VertexStruct>& vertices,
             const std::vector<uint32_t>& indices,
-            Material* mat = nullptr
+            std::shared_ptr<Material> mat
         );
 
         ~Mesh() = default;
@@ -31,8 +31,10 @@ class Mesh {
         );
 
     private:
+        ComPtr<ID3D12Device2> device;
+        
         std::unique_ptr<VertexBuffer> vertex;
         std::unique_ptr<IndexBuffer> index;
 
-        Material* material = nullptr;
+        std::shared_ptr<Material> material;
 };

@@ -9,7 +9,10 @@ Texture::Texture(
     const std::wstring& path,
     UINT descriptorIndex
 ) {
+    LOG_INFO(L"[Texture] Descriptor index used: %u", descriptorIndex);
     loadFromFile(device, cmdList, srvHeap, path, descriptorIndex);
+    LOG_INFO(L"[Texture] -> after loadFromFile Function ->  Descriptor index used: %u", descriptorIndex);
+
 }
 
 void Texture::loadFromFile(
@@ -29,6 +32,7 @@ void Texture::loadFromFile(
         nullptr,
         image
     );
+    
     if (FAILED(hr)) throw std::runtime_error("Failed to load image with DirectXTex.");
 
     const TexMetadata& meta = image.GetMetadata();
@@ -117,13 +121,11 @@ void Texture::loadFromFile(
     srvDesc.Texture2D.MipLevels = static_cast<UINT>(meta.mipLevels);
 
     auto cpuHandle = srvHeap->getCPUHandle(descriptorIndex);
-    gpuHandle = srvHeap->getGPUHandle(descriptorIndex);
 
-    device->CreateShaderResourceView(
-        resource.Get(), 
-        &srvDesc, 
-        cpuHandle
-    );
+    device->CreateShaderResourceView(resource.Get(), &srvDesc, cpuHandle);
+
+    gpuHandle = srvHeap->getGPUHandle(descriptorIndex);
+    LOG_INFO(L"[Texture] GPU handle after SRV creation = 0x%llX", gpuHandle.ptr);
 
     LOG_INFO(L"Texture -> Successfully loaded %s", path.c_str());
 }
