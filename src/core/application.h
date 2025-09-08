@@ -10,6 +10,7 @@ class Model;
 class ConstantBuffer;
 class Pipeline;
 class Camera;
+class Lighting;
 
 class UpdateEventArgs;
 class RenderEventArgs;
@@ -67,4 +68,6 @@ class Application
         std::unique_ptr<ConstantBuffer> constantBuffer1;
         std::unique_ptr<Pipeline> pipeline1;
         std::unique_ptr<Camera> camera1;
+
+        std::unique_ptr<Lighting> lighting1;
 };

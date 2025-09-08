@@ -5,11 +5,14 @@
 #include "engine/command_queue.h"
 #include "engine/swapchain.h"
 #include "engine/mesh.h"
-#include "engine/resources/constant.h"
 #include "engine/shader.h"
 #include "engine/pipeline.h"
-#include "engine/scene/camera.h"
 #include "engine/model.h"
+
+#include "engine/resources/constant.h"
+
+#include "engine/scene/camera.h"
+#include "engine/scene/lighting.h"
 
 #include "utils/events.h"
 #include "utils/frame_timer.h"
@@ -112,17 +115,25 @@ void Application::init() {
     );
     LOG_INFO(L"Camera initialized!");
 
-    // camera1->setTarget(model->getBoundingCenter(), model->getBoundingRadius());
     camera1->frameModel(modelCenter, modelRadius);
+
+    lighting1 = std::make_unique<Lighting>(
+        device->getDevice()
+    );
+    LOG_INFO(L"Lighting initialized!");
 
     // pipeline
     // Root parameters: TODO: make it dynamic?
 
-    // CBV Root Param -> MVP = 0
+    // CBV Root Param -> MVP = b0
     CD3DX12_ROOT_PARAMETER cbvRootParam;
     cbvRootParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
 
-    // SRV Root Param -> Texture = 1
+    // CBV Root Param -> Lighting = b1
+    CD3DX12_ROOT_PARAMETER lightCBVRootParam;
+    lightCBVRootParam.InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    // SRV Root Param -> Texture = t0
     CD3DX12_DESCRIPTOR_RANGE srvRange;
     srvRange.Init(
         D3D12_DESCRIPTOR_RANGE_TYPE_SRV, // type: SRV (shader resource view)
@@ -137,7 +148,11 @@ void Application::init() {
         D3D12_SHADER_VISIBILITY_PIXEL
     );
 
-    std::vector<D3D12_ROOT_PARAMETER> rootParams = { cbvRootParam, srvRootParam };
+    std::vector<D3D12_ROOT_PARAMETER> rootParams = { 
+        cbvRootParam, 
+        srvRootParam,
+        lightCBVRootParam
+    };
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -231,6 +246,28 @@ void Application::onUpdate(UpdateEventArgs& args)
     MVPConstantStruct mvpData;
     mvpData.mvp = XMMatrixTranspose(model * view * projection);
     constantBuffer1->update(&mvpData, sizeof(mvpData)); // Upload to GPU
+
+    lighting1->setDirectionalLight(
+        {
+            0.5f, 1.0f, -0.5f
+        }, 
+        {
+            1.0f, 1.0f, 1.0f
+        }, 
+        1.0f
+    );
+    lighting1->setPointLight(
+        {
+            0.0f, 5.0f, 0.0f
+        }, 
+        10.0f, 
+        {
+            1.0f, 0.8f, 0.6f
+        }, 
+        1.0f
+    );
+
+    lighting1->updateGPU();
 }
 
 void Application::onRender(RenderEventArgs& args)
@@ -265,26 +302,43 @@ void Application::onRender(RenderEventArgs& args)
 
     // Transition back buffer to render target
     auto backBuffer = swapchain->getBackBuffer(currentBackBufferIndex);
-    transitionResource(commandList, backBuffer.Get(),
-                       D3D12_RESOURCE_STATE_PRESENT,
-                       D3D12_RESOURCE_STATE_RENDER_TARGET);
+    transitionResource(
+        commandList, 
+        backBuffer.Get(),
+        D3D12_RESOURCE_STATE_PRESENT,
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
     LOG_INFO(L"Application -> Back buffer transitioned to RENDER_TARGET.");
 
     // Set render target and depth-stencil
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvHeap->getHeap()->GetCPUDescriptorHandleForHeapStart(),
-                                            currentBackBufferIndex, rtvHeap->getDescriptorSize());
-    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsvHeap->getHeap()->GetCPUDescriptorHandleForHeapStart());
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+        rtvHeap->getHeap()->GetCPUDescriptorHandleForHeapStart(),
+        currentBackBufferIndex, 
+        rtvHeap->getDescriptorSize()
+    );
+    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(
+        dsvHeap->getHeap()->GetCPUDescriptorHandleForHeapStart()
+    );
     commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
     // Clear render target and depth-stencil
     const float clearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
     commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+    commandList->ClearDepthStencilView(
+        dsvHandle, 
+        D3D12_CLEAR_FLAG_DEPTH, 
+        1.0f, 0, 0, 
+        nullptr
+    );
     LOG_INFO(L"Application -> Render target and depth-stencil cleared.");
 
     // Draw the Model
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     LOG_INFO(L"Application -> Primitive topology set to TRIANGLELIST.");
+
+    // Root parameter 1 = light CBV
+    commandList->SetGraphicsRootConstantBufferView(2, lighting1->getCBV()->getGPUAddress());
+    LOG_INFO(L"Lighting CBV bound.");
 
     // call mesh/model draw
     model->draw(
@@ -292,6 +346,7 @@ void Application::onRender(RenderEventArgs& args)
         srvHeap->getHeap().Get(),
         1 // Root parameter index for the SRV (t0)
     );
+    
     LOG_INFO(L"Application -> Model drawn.");
 
     // Transition back buffer to present

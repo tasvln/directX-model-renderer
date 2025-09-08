@@ -11,6 +11,7 @@ Lighting::Lighting(
     lightData.numDirectionalLights = 0;
     lightData.numPointLights = 0;
     lightData.numSpotLights = 0;
+    LOG_INFO(L"Lighting -> Light Created Successfully.");
 }
 
 void Lighting::setDirectionalLight(
@@ -26,6 +27,8 @@ void Lighting::setDirectionalLight(
     light.direction = direction;
     light.color = color;
     light.intensity = intensity;
+
+    LOG_INFO(L"Lighting -> Directional Light Set.");
 }
 
 void Lighting::setPointLight(
@@ -43,6 +46,8 @@ void Lighting::setPointLight(
     light.range = range;
     light.color = color;
     light.intensity = intensity;
+    
+    LOG_INFO(L"Lighting -> Point Light Set.");
 }
 
 void Lighting::setSpotLight(
@@ -66,9 +71,12 @@ void Lighting::setSpotLight(
     light.outerAngle = outerAngle;
     light.color = color;
     light.intensity = intensity;
+
+    LOG_INFO(L"Lighting -> Spot Light Set.");
 }
 
 void Lighting::updateGPU() {
     lightCBV->update(&lightData, sizeof(LightBufferData));
+    LOG_INFO(L"Lighting -> Updated GPU Successfully.");
 }
 
