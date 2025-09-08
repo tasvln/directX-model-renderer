@@ -1,3 +1,5 @@
+#include "structs/lighting.hlsl"
+
 struct VertexInputType {
     float4 position : POSITION;
     float3 normal   : NORMAL;

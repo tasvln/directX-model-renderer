@@ -69,6 +69,8 @@
     #include <dxgidebug.h>
 #endif
 
+#include "structs.h"
+
 #define LOG_INFO(fmt, ...)    Logger::instance().log(LogType::Info,    __FILE__, __FUNCTION__, __LINE__, fmt, __VA_ARGS__)
 #define LOG_WARNING(fmt, ...) Logger::instance().log(LogType::Warning, __FILE__, __FUNCTION__, __LINE__, fmt, __VA_ARGS__)
 #define LOG_ERROR(fmt, ...)   Logger::instance().log(LogType::Error,   __FILE__, __FUNCTION__, __LINE__, fmt, __VA_ARGS__)
@@ -79,44 +81,6 @@ static const UINT FRAMEBUFFERCOUNT = 3;
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
-
-// future -> can put this in a settings file if i decide on a debug UI
-struct WindowConfig {
-    LPCWSTR appName;
-    LPCWSTR windowClassName;
-    uint32_t width;
-    uint32_t height;
-    bool enabledDirectX;
-    bool useWarp;
-    bool fullscreen = false;
-    bool resizable = true;
-};
-
-struct CameraConfig {
-    float fov;
-    float nearZ;
-    float farZ;
-};
-
-// struct alignas(16) VertexStruct {
-//     DirectX::XMFLOAT3 position;   // 12 (GPU padded to 16)
-//     DirectX::XMFLOAT3 normal;     // 12 (padded to 16)
-//     DirectX::XMFLOAT3 tangent;    // 12 (padded to 16)
-//     DirectX::XMFLOAT2 texcoord;   // 8
-//     DirectX::XMFLOAT4 color;      // 16
-// };
-
-struct alignas(16) VertexStruct {
-    DirectX::XMFLOAT4 position;
-    DirectX::XMFLOAT3 normal;
-    DirectX::XMFLOAT3 tangent;
-    DirectX::XMFLOAT2 texcoord;
-};
-
-struct alignas(256) ConstantMVP
-{
-    DirectX::XMMATRIX mvp;
-};
 
 inline void throwFailed(HRESULT hr) {
     if (FAILED(hr)) {

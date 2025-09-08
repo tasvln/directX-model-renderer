@@ -97,7 +97,7 @@ void Application::init() {
     // mvpBuffer?
     constantBuffer1 = std::make_unique<ConstantBuffer>(
         device->getDevice(),
-        static_cast<UINT>(sizeof(ConstantMVP))
+        static_cast<UINT>(sizeof(MVPConstantStruct))
     );
     LOG_INFO(L"ConstantBuffer1 Resource initialized!");
 
@@ -228,7 +228,7 @@ void Application::onUpdate(UpdateEventArgs& args)
     XMMATRIX projection = camera1->getProjectionMatrix();
 
     // Update Constant Buffer In GPU
-    ConstantMVP mvpData;
+    MVPConstantStruct mvpData;
     mvpData.mvp = XMMatrixTranspose(model * view * projection);
     constantBuffer1->update(&mvpData, sizeof(mvpData)); // Upload to GPU
 }
