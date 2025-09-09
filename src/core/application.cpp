@@ -97,12 +97,17 @@ void Application::init() {
     );
     LOG_INFO(L"Model Resource initialized!");
 
-    // mvpBuffer?
-    constantBuffer1 = std::make_unique<ConstantBuffer>(
+    mvpBuffer = std::make_unique<ConstantBuffer>(
         device->getDevice(),
         static_cast<UINT>(sizeof(MVPConstantStruct))
     );
-    LOG_INFO(L"ConstantBuffer1 Resource initialized!");
+    LOG_INFO(L"mvpBuffer Resource initialized!");
+
+    materialBuffer = std::make_unique<ConstantBuffer>(
+        device->getDevice(),
+        static_cast<UINT>(sizeof(MVPConstantStruct))
+    );
+    LOG_INFO(L"mvpBuffer Resource initialized!");
 
     auto modelCenter = model->getBoundingCenter();
     auto modelRadius = model->getBoundingRadius();
@@ -126,33 +131,32 @@ void Application::init() {
     // Root parameters: TODO: make it dynamic?
 
     // CBV Root Param -> MVP = b0
-    CD3DX12_ROOT_PARAMETER cbvRootParam;
-    cbvRootParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
+    CD3DX12_ROOT_PARAMETER cbvMvpParam;
+    cbvMvpParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
 
-    // CBV Root Param -> Lighting = b1
-    CD3DX12_ROOT_PARAMETER lightCBVRootParam;
-    lightCBVRootParam.InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+    // CBV Root Param -> Material = b0 in pixel shader (register b0)
+    CD3DX12_ROOT_PARAMETER cbvMaterialParam;
+    cbvMaterialParam.InitAsConstantBufferView(0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    // CBV Root Param -> Lighting = b1 in pixel shader (register b1)
+    CD3DX12_ROOT_PARAMETER cbvLightParam;
+    cbvLightParam.InitAsConstantBufferView(1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
 
     // SRV Root Param -> Texture = t0
     CD3DX12_DESCRIPTOR_RANGE srvRange;
-    srvRange.Init(
-        D3D12_DESCRIPTOR_RANGE_TYPE_SRV, // type: SRV (shader resource view)
-        1, 
-        0 
-    ); // 1 SRV at t0
+    srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
     CD3DX12_ROOT_PARAMETER srvRootParam;
-    srvRootParam.InitAsDescriptorTable(
-        1,
-        &srvRange, 
-        D3D12_SHADER_VISIBILITY_PIXEL
-    );
+    srvRootParam.InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
+    // Combine root params
     std::vector<D3D12_ROOT_PARAMETER> rootParams = { 
-        cbvRootParam, 
-        srvRootParam,
-        lightCBVRootParam
+        cbvMvpParam, 
+        cbvMaterialParam, 
+        cbvLightParam, 
+        srvRootParam 
     };
+
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -245,7 +249,7 @@ void Application::onUpdate(UpdateEventArgs& args)
     // Update Constant Buffer In GPU
     MVPConstantStruct mvpData;
     mvpData.mvp = XMMatrixTranspose(model * view * projection);
-    constantBuffer1->update(&mvpData, sizeof(mvpData)); // Upload to GPU
+    mvpBuffer->update(&mvpData, sizeof(mvpData)); // Upload to GPU
 
     lighting1->setDirectionalLight(
         {
@@ -292,10 +296,6 @@ void Application::onRender(RenderEventArgs& args)
     commandList->SetGraphicsRootSignature(rootSignature.Get());
     LOG_INFO(L"Application -> Pipeline state and root signature set.");
 
-    // Set constant buffer (MVP updated in onUpdate)
-    commandList->SetGraphicsRootConstantBufferView(0, constantBuffer1->getGPUAddress());
-    LOG_INFO(L"Application -> Constant buffer bound.");
-
     // Set viewport and scissor
     commandList->RSSetViewports(1, &viewport);
     commandList->RSSetScissorRects(1, &scissorRect);
@@ -336,15 +336,21 @@ void Application::onRender(RenderEventArgs& args)
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     LOG_INFO(L"Application -> Primitive topology set to TRIANGLELIST.");
 
+    // Set constant buffer (MVP updated in onUpdate)
+    commandList->SetGraphicsRootConstantBufferView(0, mvpBuffer->getGPUAddress());
+    LOG_INFO(L"Application -> Constant buffer bound.");
+
+    commandList->SetGraphicsRootConstantBufferView(1, materialBuffer->getGPUAddress());
+
     // Root parameter 1 = light CBV
     commandList->SetGraphicsRootConstantBufferView(2, lighting1->getCBV()->getGPUAddress());
-    LOG_INFO(L"Lighting CBV bound.");
+    LOG_INFO(L"Application -> Lighting CBV bound.");
 
     // call mesh/model draw
     model->draw(
         commandList.Get(),
         srvHeap->getHeap().Get(),
-        1 // Root parameter index for the SRV (t0)
+        3 // Root parameter index for the SRV (t0)
     );
     
     LOG_INFO(L"Application -> Model drawn.");
@@ -470,8 +476,8 @@ void Application::cleanUp() {
         LOG_INFO(L"Model released.");
     }
 
-    if (constantBuffer1) {
-        constantBuffer1.reset();
+    if (mvpBuffer) {
+        mvpBuffer.reset();
         LOG_INFO(L"Constant buffer released.");
     }
 

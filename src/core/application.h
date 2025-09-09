@@ -65,7 +65,8 @@ class Application
         // std::unique_ptr<CommandQueue> copyCommandQueue;
         std::unique_ptr<Swapchain> swapchain;
         std::unique_ptr<Model> model;
-        std::unique_ptr<ConstantBuffer> constantBuffer1;
+        std::unique_ptr<ConstantBuffer> mvpBuffer;
+        std::unique_ptr<ConstantBuffer> materialBuffer;
         std::unique_ptr<Pipeline> pipeline1;
         std::unique_ptr<Camera> camera1;
 

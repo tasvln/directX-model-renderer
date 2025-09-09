@@ -1,6 +1,14 @@
 #ifndef LIGHTING_STRUCTS_HLSL
 #define LIGHTING_STRUCTS_HLSL
 
+// 1 = Blinn-Phong, 0 = Phong
+#define USE_BLINN_PHONG 1;
+
+struct LightingResult {
+    float3 Diffuse;
+    float3 Specular;
+};
+
 #define MAX_DIRECTIONAL_LIGHTS 4
 #define MAX_POINT_LIGHTS 8
 #define MAX_SPOT_LIGHTS 4
