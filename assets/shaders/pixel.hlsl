@@ -5,34 +5,31 @@
 #include "compute/lighting.hlsl"
 
 struct PixelInputType {
-    float4 position : SV_POSITION;  // required
-    float3 normal   : NORMAL;
-    float3 tangent  : TANGENT;
-    float2 uv       : TEXCOORD;
+    float4 position : SV_POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv : TEXCOORD;
 };
 
-// cbuffer LightCB : register(b1)
-// {
-//     LightBufferData lightData;
-// };
+cbuffer LightCB : register(b1)
+{
+    LightBufferData lightData;
+};
 
 // Texture SRV bound to t0
-Texture2D tex : register(t0);
+Texture2D texture : register(t0);
 
 // Sampler bound to s0
-SamplerState samLinear : register(s0);
+SamplerState samplerLinear : register(s0);
 
 float4 psmain(PixelInputType input) : SV_TARGET
 {
     // Sample texture
-    float4 color = tex.Sample(samLinear, input.uv);
+    float4 color = texture.Sample(samplerLinear, input.uv);
 
-    // TODO: read into lighting -> that's what's next!!!
-    // Simple directional lighting
-    float3 lightDir = normalize(float3(0.5f, 1.0f, -0.5f));
-    float NdotL = saturate(dot(normalize(input.normal), lightDir));
+    float3 light = computeLighting(
 
-    float3 litColor = color.rgb * (0.2f + 0.8f * NdotL);
+    );
 
-    return float4(litColor, color.a);
+    return float4(light, color.a);
 }

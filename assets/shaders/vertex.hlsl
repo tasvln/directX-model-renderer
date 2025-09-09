@@ -8,7 +8,7 @@ struct VertexInputType {
 };
 
 struct PixelInputType {
-    float4 position : SV_POSITION;  // required
+    float4 position : SV_POSITION;
     float3 normal   : NORMAL;
     float3 tangent  : TANGENT;
     float2 uv       : TEXCOORD;
