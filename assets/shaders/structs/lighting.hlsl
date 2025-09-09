@@ -1,23 +1,42 @@
 #ifndef LIGHTING_STRUCTS_HLSL
 #define LIGHTING_STRUCTS_HLSL
 
-struct DirectionalLight {
+#define MAX_DIRECTIONAL_LIGHTS 4
+#define MAX_POINT_LIGHTS 8
+#define MAX_SPOT_LIGHTS 4
+
+struct alignas(16) DirectionalLight {
     float3 direction;
     float  intensity;
     float3 color;
-    float  pad1; // Padding for 16-byte alignment
+    float  pad; // padding for 16-byte alignment
 };
 
-struct PointLight {
+struct alignas(16) PointLight {
     float3 position;
     float  range;
     float3 color;
     float  intensity;
 };
 
-struct LightBufferData {
-    DirectionalLight directionalLight;
-    PointLight pointLight;
+struct alignas(16) SpotLight {
+    float3 position;
+    float  range;
+    float3 direction;
+    float  innerCone;
+    float  outerCone;
+    float3 color;
+    float  intensity;
 };
+
+struct alignas(16) LightBufferData {
+    DirectionalLight dirLights[MAX_DIRECTIONAL_LIGHTS];
+    PointLight pointLights[MAX_POINT_LIGHTS];
+    SpotLight spotLights[MAX_SPOT_LIGHTS];
+    int numDirLights;
+    int numPointLights;
+    int numSpotLights;
+};
+
 
 #endif
