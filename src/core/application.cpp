@@ -91,9 +91,9 @@ void Application::init() {
         device->getDevice(),
         directCommandQueue.get(),
         swapchain->getSRVHeap(),
-        "assets/models/building1/building.obj"
+        // "assets/models/building1/building.obj"
         // "assets/models/cat/cat.obj"
-        // "assets/models/mountain1/mountain.obj"
+        "assets/models/mountain1/mountain.obj"
     );
     LOG_INFO(L"Model Resource initialized!");
 
@@ -105,7 +105,7 @@ void Application::init() {
 
     materialBuffer = std::make_unique<ConstantBuffer>(
         device->getDevice(),
-        static_cast<UINT>(sizeof(MVPConstantStruct))
+        static_cast<UINT>(sizeof(MaterialData))
     );
     LOG_INFO(L"mvpBuffer Resource initialized!");
 
@@ -130,31 +130,31 @@ void Application::init() {
     // pipeline
     // Root parameters: TODO: make it dynamic?
 
-    // CBV Root Param -> MVP = b0
+    // MVP = b0 (VS)
     CD3DX12_ROOT_PARAMETER cbvMvpParam;
-    cbvMvpParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
+    cbvMvpParam.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
-    // CBV Root Param -> Material = b0 in pixel shader (register b0)
+    // Material = b0 (PS)
     CD3DX12_ROOT_PARAMETER cbvMaterialParam;
-    cbvMaterialParam.InitAsConstantBufferView(0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+    cbvMaterialParam.InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
-    // CBV Root Param -> Lighting = b1 in pixel shader (register b1)
+    // Lighting = b1 (PS)
     CD3DX12_ROOT_PARAMETER cbvLightParam;
-    cbvLightParam.InitAsConstantBufferView(1, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+    cbvLightParam.InitAsConstantBufferView(2, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
-    // SRV Root Param -> Texture = t0
+    // Texture = t0 (PS)
     CD3DX12_DESCRIPTOR_RANGE srvRange;
     srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
     CD3DX12_ROOT_PARAMETER srvRootParam;
     srvRootParam.InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
-    // Combine root params
-    std::vector<D3D12_ROOT_PARAMETER> rootParams = { 
-        cbvMvpParam, 
-        cbvMaterialParam, 
-        cbvLightParam, 
-        srvRootParam 
+    // Combine
+    std::vector<D3D12_ROOT_PARAMETER> rootParams = {
+        cbvMvpParam,
+        cbvMaterialParam,
+        cbvLightParam,
+        srvRootParam
     };
 
 
@@ -196,6 +196,50 @@ void Application::init() {
         DXGI_FORMAT_R8G8B8A8_UNORM,
         DXGI_FORMAT_D24_UNORM_S8_UINT
     );
+
+    
+
+    // --------------------
+    // Initialize material
+    // --------------------
+    MaterialData mat;
+    mat.emissive      = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+    mat.ambient       = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+    mat.diffuse       = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    mat.specular      = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    mat.specularPower = 16.0f;
+    mat.useTexture    = true;
+
+    materialBuffer->update(&mat, sizeof(MaterialData));
+
+    // --------------------
+    // Initialize lights
+    // --------------------
+    lighting1->setLight(
+        0,
+        LightType::Directional,
+        {
+            0.0f, 
+            0.0f,
+            0.0f
+        },    // position ignored for directional
+        {0.5f, 1.0f, -0.5f},   // direction
+        0.0f, 0.0f, 0.0f,    // range, innerAngle, outerAngle
+        {1.0f,1.0f,1.0f},    // color
+        1.0f                  // intensity
+    );
+
+    lighting1->setLight(
+        1,
+        LightType::Point,
+        {0.0f, 5.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f}, // direction ignored
+        10.0f, 0.0f, 0.0f,
+        {1.0f, 1.0f, 0.6f},
+        1.0f
+    );
+
+    lighting1->updateGPU();
 }
 
 int Application::run() {
@@ -248,30 +292,13 @@ void Application::onUpdate(UpdateEventArgs& args)
 
     // Update Constant Buffer In GPU
     MVPConstantStruct mvpData;
-    mvpData.mvp = XMMatrixTranspose(model * view * projection);
-    mvpBuffer->update(&mvpData, sizeof(mvpData)); // Upload to GPU
+    mvpData.model = XMMatrixTranspose(model);        
+    mvpData.viewProj = XMMatrixTranspose(view * projection);
+    mvpBuffer->update(&mvpData, sizeof(mvpData));
 
-    lighting1->setDirectionalLight(
-        {
-            0.5f, 1.0f, -0.5f
-        }, 
-        {
-            1.0f, 1.0f, 1.0f
-        }, 
-        1.0f
-    );
-    lighting1->setPointLight(
-        {
-            0.0f, 5.0f, 0.0f
-        }, 
-        10.0f, 
-        {
-            1.0f, 0.8f, 0.6f
-        }, 
-        1.0f
-    );
-
-    lighting1->updateGPU();
+    XMFLOAT3 camPos = camera1->getPosition();
+    lighting1->setEyePosition(camPos);
+    lighting1->updateGPU(); // Push the light buffer to GPU
 }
 
 void Application::onRender(RenderEventArgs& args)
@@ -437,11 +464,16 @@ void Application::onResize(ResizeEventArgs& args)
 
 void Application::onMouseWheel(MouseWheelEventArgs& args)
 {
-    if (args.control) {
-        camera1->zoom(args.wheelDelta * 0.1f); // radius zoom
-    } else {
-        camera1->setFov(camera1->getFov() - args.wheelDelta * 0.02f); // slow FOV change
-    }
+    // if (args.control) {
+    //     camera1->zoom(args.wheelDelta * 0.1f); // radius zoom
+    // } 
+    // else {
+    //     camera1->setFov(camera1->getFov() - args.wheelDelta * 0.02f); // slow FOV change
+    // }
+
+    camera1->setFov(camera1->getFov() - args.wheelDelta * 0.05f);
+
+    // camera1->zoom(args.wheelDelta * 0.1f);
 }
 
 void Application::onMouseMoved(MouseMotionEventArgs& args) {
@@ -467,10 +499,9 @@ void Application::cleanUp() {
 
     if (directCommandQueue) {
         LOG_INFO(L"Flushing GPU commands before releasing resources...");
-        directCommandQueue->flush(); // ensure GPU has finished all work
+        directCommandQueue->flush();
     }
 
-    // Reset resources in reverse creation order
     if (model) {
         model.reset();
         LOG_INFO(L"Model released.");
@@ -478,7 +509,17 @@ void Application::cleanUp() {
 
     if (mvpBuffer) {
         mvpBuffer.reset();
-        LOG_INFO(L"Constant buffer released.");
+        LOG_INFO(L"MVP constant buffer released.");
+    }
+
+    if (materialBuffer) {
+        materialBuffer.reset();
+        LOG_INFO(L"Material constant buffer released.");
+    }
+
+    if (lighting1) {
+        lighting1.reset();
+        LOG_INFO(L"Lighting released.");
     }
 
     if (pipeline1) {
@@ -492,9 +533,7 @@ void Application::cleanUp() {
     }
 
     if (swapchain) {
-        // Wait for GPU to finish using back buffers before releasing
         directCommandQueue->flush();
-
         swapchain.reset();
         LOG_INFO(L"Swapchain released.");
     }

@@ -9,25 +9,15 @@ public:
         ComPtr<ID3D12Device2> device
     );
 
-    void setDirectionalLight(
-        const XMFLOAT3& direction, 
-        const XMFLOAT3& color, 
-        float intensity
-    );
-
-    void setPointLight(
-        const XMFLOAT3& position, 
-        float range, 
-        const XMFLOAT3& color, 
-        float intensity
-    );
-
-    void setSpotLight(
-        const XMFLOAT3& position, 
-        const XMFLOAT3& direction, 
-        float range, float innerAngle, 
-        float outerAngle, 
-        const XMFLOAT3& color, 
+    void setLight(
+        UINT index,
+        LightType type,
+        const XMFLOAT3& position,
+        const XMFLOAT3& direction,
+        float range,
+        float innerAngle,
+        float outerAngle,
+        const XMFLOAT3& color,
         float intensity
     );
 
@@ -35,7 +25,25 @@ public:
     void updateGPU();
 
     // Get GPU handle
-    ConstantBuffer* getCBV() { return lightCBV.get(); }
+    ConstantBuffer* getCBV() { 
+        return lightCBV.get(); 
+    }
+
+    void setEyePosition(const XMFLOAT3& eyePos) {
+        lightData.eyePosition = XMFLOAT4(eyePos.x, eyePos.y, eyePos.z, 1.0f);
+    }
+
+    void setGlobalAmbient(const XMFLOAT3& ambient) {
+        lightData.globalAmbient = XMFLOAT4(ambient.x, ambient.y, ambient.z, 1.0f);
+    }
+
+    void setBlinnPhong(bool enabled) {
+        lightData.useBlinnPhong = enabled;
+    }
+
+    void setSpecularPower(float power) {
+        lightData.specPower = power;
+    }
 
 private:
     LightBufferData lightData {};

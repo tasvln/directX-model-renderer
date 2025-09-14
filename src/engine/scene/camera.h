@@ -45,6 +45,10 @@ public:
         return XMMatrixMultiply(view, projection);
     }
 
+    XMFLOAT3 getPosition() const {
+        return position;
+    }
+
     float getFov() const { 
         return fov; 
     }

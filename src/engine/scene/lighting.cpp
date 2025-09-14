@@ -8,71 +8,42 @@ Lighting::Lighting(
         static_cast<UINT>(sizeof(LightBufferData))
     );
 
-    lightData.numDirectionalLights = 0;
-    lightData.numPointLights = 0;
-    lightData.numSpotLights = 0;
-    LOG_INFO(L"Lighting -> Light Created Successfully.");
+    lightData.numLights = 0;
+    lightData.globalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+    lightData.eyePosition = XMFLOAT4(0, 0, -5, 1); // arbitrary until updated
+    lightData.useBlinnPhong = true;
+    lightData.specPower = 16.0f;
+
+    LOG_INFO(L"Lighting -> Light System Created Successfully.");
 }
 
-void Lighting::setDirectionalLight(
-    const XMFLOAT3& direction, 
-    const XMFLOAT3& color, 
+void Lighting::setLight(
+    UINT index,
+    LightType type,
+    const XMFLOAT3& position,
+    const XMFLOAT3& direction,
+    float range,
+    float innerAngle,
+    float outerAngle,
+    const XMFLOAT3& color,
     float intensity
 ) {
-    if (lightData.numDirectionalLights >= MAX_DIRECTIONAL_LIGHTS) 
-        return;
+    if (index >= MAX_LIGHTS) return;
 
-    auto& light = lightData.directionalLights[lightData.numDirectionalLights++];
-    light.type = LightType::Directional;
-    light.direction = direction;
-    light.color = color;
-    light.intensity = intensity;
-
-    LOG_INFO(L"Lighting -> Directional Light Set.");
-}
-
-void Lighting::setPointLight(
-    const XMFLOAT3& position, 
-    float range, 
-    const XMFLOAT3& color, 
-    float intensity
-) {
-    if (lightData.numPointLights >= MAX_POINT_LIGHTS) 
-        return;
-
-    auto& light = lightData.pointLights[lightData.numPointLights++];
-    light.type = LightType::Point;
-    light.position = position;
-    light.range = range;
-    light.color = color;
-    light.intensity = intensity;
-    
-    LOG_INFO(L"Lighting -> Point Light Set.");
-}
-
-void Lighting::setSpotLight(
-    const XMFLOAT3& position, 
-    const XMFLOAT3& direction, 
-    float range, 
-    float innerAngle, 
-    float outerAngle, 
-    const XMFLOAT3& color, 
-    float intensity
-) {
-    if (lightData.numSpotLights >= MAX_SPOT_LIGHTS) 
-        return;
-
-    auto& light = lightData.spotLights[lightData.numSpotLights++];
-    light.type = LightType::Spot;
-    light.position = position;
-    light.direction = direction;
+    auto& light = lightData.lights[index];
+    light.type = static_cast<int>(type);
+    light.enabled = 1.0f;
+    light.position = XMFLOAT4(position.x, position.y, position.z, 1.0f);
+    light.direction = XMFLOAT4(direction.x, direction.y, direction.z, 0.0f);
     light.range = range;
     light.innerAngle = innerAngle;
     light.outerAngle = outerAngle;
-    light.color = color;
+    light.color = XMFLOAT4(color.x, color.y, color.z, 1.0f);
     light.intensity = intensity;
 
-    LOG_INFO(L"Lighting -> Spot Light Set.");
+    if (index >= lightData.numLights) {
+        lightData.numLights = index + 1;
+    }
 }
 
 void Lighting::updateGPU() {
