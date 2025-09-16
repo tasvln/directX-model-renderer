@@ -42,15 +42,15 @@ enum class LightType : int {
 
 struct alignas(16) Light
 {
-    XMFLOAT4 position;
-    XMFLOAT4 direction;
-    XMFLOAT4 color;
-    float range = 0.0f;
-    float innerAngle = 0.0f;
-    float outerAngle = 0.0f;
-    float intensity = 1.0f;
-    int type = 0;
-    float enabled = 0.0f; // match HLSL float instead of bool
+    XMFLOAT4 position; // world-space position (for point/spot)
+    XMFLOAT4 direction; // world-space direction (for directional/spot)
+    XMFLOAT4 color; // RGB color
+    float range = 0.0f; // how far point/spot light reaches
+    float innerAngle = 0.0f; // spot light inner cone (radians)
+    float outerAngle = 0.0f; // spot light outer cone (radians)
+    float intensity = 1.0f; // brightness multiplier
+    int type = 0; // 0=dir, 1=point, 2=spot
+    float enabled = 0.0f; // 0 = off, 1 = on
     float pad[2] = {0,0}; // align to 16 bytes
 };
 
@@ -60,9 +60,8 @@ struct alignas(16) LightBufferData
     XMFLOAT4 globalAmbient;
     Light lights[MAX_LIGHTS];
     UINT numLights;
-    float useBlinnPhong = 0.0f; // match HLSL
-    float specPower = 16.0f;
-    float pad[2] = {0,0}; // align to 16 bytes
+    float useBlinnPhong;
+    float pad[2];
 };
 
 struct alignas(16) MaterialData
@@ -72,6 +71,6 @@ struct alignas(16) MaterialData
     XMFLOAT4 diffuse;        // 16 bytes
     XMFLOAT4 specular;       // 16 bytes
     float specularPower;  // 4 bytes
-    bool useTexture;     // 4 bytes
+    float useTexture;     // 4 bytes
     XMFLOAT2 padding;    // 8 bytes to match 16-byte alignment
 };

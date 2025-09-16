@@ -24,13 +24,12 @@ cbuffer MaterialCB : register(b1)
 // Lights
 cbuffer LightCB : register(b2)
 {
-    Light lights[MAX_LIGHTS];
-    uint numLights;
     float4 eyePosition;
     float4 globalAmbient;
+    Light lights[MAX_LIGHTS];
+    uint numLights;
     float useBlinnPhong;
-    float specPower;
-    float padding[2]; // align to 16 bytes
+    float padding[2];
 };
 
 // Texture/Sampler
@@ -55,7 +54,7 @@ float4 psmain(PixelInputType IN) : SV_TARGET
         eyePosition.xyz,
         globalAmbient.xyz,
         (useBlinnPhong > 0.5f),
-        specPower,
+        material.specularPower,
         IN.worldPos,
         normalize(IN.worldNormal),
         ambient,

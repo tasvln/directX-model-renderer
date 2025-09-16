@@ -12,7 +12,6 @@ Lighting::Lighting(
     lightData.globalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
     lightData.eyePosition = XMFLOAT4(0, 0, -5, 1); // arbitrary until updated
     lightData.useBlinnPhong = true;
-    lightData.specPower = 16.0f;
 
     LOG_INFO(L"Lighting -> Light System Created Successfully.");
 }

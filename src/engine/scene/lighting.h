@@ -41,10 +41,6 @@ public:
         lightData.useBlinnPhong = enabled;
     }
 
-    void setSpecularPower(float power) {
-        lightData.specPower = power;
-    }
-
 private:
     LightBufferData lightData {};
     std::unique_ptr<ConstantBuffer> lightCBV;

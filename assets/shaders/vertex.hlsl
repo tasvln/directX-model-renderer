@@ -44,12 +44,12 @@ PixelInputType vsmain(VertexInputType input)
     output.position = mul(worldPosition, viewProj); // clip space
     output.worldPos = worldPosition.xyz;
 
-    // output.worldNormal = normalize(
-    //     mul(float4(input.normal, 0.0f), model).xyz
-    // );
+    output.worldNormal = normalize(
+        mul(float4(input.normal, 0.0f), model).xyz
+    );
 
-    float3x3 normalMatrix = transpose(inverse3x3((float3x3)model));
-    output.worldNormal = normalize(mul(input.normal, normalMatrix));
+    // float3x3 normalMatrix = transpose(inverse3x3((float3x3)model));
+    // output.worldNormal = normalize(mul(input.normal, normalMatrix));
 
     // Pass through data for pixel shader
     output.tangent = input.tangent;

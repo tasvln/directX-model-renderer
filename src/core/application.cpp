@@ -92,8 +92,8 @@ void Application::init() {
         directCommandQueue.get(),
         swapchain->getSRVHeap(),
         // "assets/models/building1/building.obj"
-        // "assets/models/cat/cat.obj"
-        "assets/models/mountain1/mountain.obj"
+        "assets/models/cat/cat.obj"
+        // "assets/models/mountain1/mountain.obj"
     );
     LOG_INFO(L"Model Resource initialized!");
 
@@ -157,7 +157,6 @@ void Application::init() {
         srvRootParam
     };
 
-
     std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -198,7 +197,6 @@ void Application::init() {
     );
 
     
-
     // --------------------
     // Initialize material
     // --------------------
@@ -207,7 +205,8 @@ void Application::init() {
     mat.ambient       = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
     mat.diffuse       = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     mat.specular      = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    mat.specularPower = 16.0f;
+    // Typical values: 16.0f, 32.0f, 64.0f
+    mat.specularPower = 64.0f;
     mat.useTexture    = true;
 
     materialBuffer->update(&mat, sizeof(MaterialData));
@@ -218,25 +217,25 @@ void Application::init() {
     lighting1->setLight(
         0,
         LightType::Directional,
-        {
-            0.0f, 
-            0.0f,
-            0.0f
-        },    // position ignored for directional
-        {0.5f, 1.0f, -0.5f},   // direction
-        0.0f, 0.0f, 0.0f,    // range, innerAngle, outerAngle
-        {1.0f,1.0f,1.0f},    // color
-        1.0f                  // intensity
+        { 0.0f, 0.0f, 0.0f }, // position ignored for directional
+        { 0.5f, 1.0f, -0.5f }, // direction -> change for light (sun or moon) direction
+        0.0f, // range,
+        0.0f, // innerAngle,
+        0.0f, // outerAngle
+        { 1.0f, 1.0f, 1.0f }, // color -> light color (sun or moon)
+        0.0f // intensity
     );
 
     lighting1->setLight(
         1,
         LightType::Point,
-        {0.0f, 5.0f, 0.0f},
-        {0.0f, 0.0f, 0.0f}, // direction ignored
-        10.0f, 0.0f, 0.0f,
-        {1.0f, 1.0f, 0.6f},
-        1.0f
+        { -1.0f, 5.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f }, // direction ignored
+        20.0f, 
+        0.0f, 
+        0.0f,
+        { 1.0f, 0.9f, 0.8f },
+        50.0f
     );
 
     lighting1->updateGPU();
