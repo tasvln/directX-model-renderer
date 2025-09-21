@@ -127,12 +127,63 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         VertexStruct vertex{};
-        vertex.position = { mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z, 1.0f };
-        if (mesh->HasNormals()) vertex.normal = { mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z };
-        if (mesh->HasTangentsAndBitangents()) vertex.tangent = { mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z };
-        vertex.texcoord = mesh->mTextureCoords[0] ? XMFLOAT2{ mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y } : XMFLOAT2{ 0.0f, 0.0f };
+        
+        // Position
+        vertex.position = {
+            mesh->mVertices[i].x,
+            mesh->mVertices[i].y,
+            mesh->mVertices[i].z,
+            1.0f
+        };
+
+        // Normal
+        if (mesh->HasNormals()) {
+            vertex.normal = {
+                mesh->mNormals[i].x,
+                mesh->mNormals[i].y,
+                mesh->mNormals[i].z
+            };
+        }
+
+        // Tangent + Handedness
+        if (mesh->HasTangentsAndBitangents() && mesh->HasNormals()) {
+            // Load Assimp vectors directly into XMVECTOR
+            XMVECTOR tVec = XMLoadFloat3(
+                reinterpret_cast<XMFLOAT3*>(&mesh->mTangents[i])
+            );
+            XMVECTOR bVec = XMLoadFloat3(
+                reinterpret_cast<XMFLOAT3*>(&mesh->mBitangents[i])
+            );
+            XMVECTOR nVec = XMLoadFloat3(
+                reinterpret_cast<XMFLOAT3*>(&mesh->mNormals[i])
+            );
+
+            // Optional: normalize to be safe
+            tVec = XMVector3Normalize(tVec);
+            bVec = XMVector3Normalize(bVec);
+            nVec = XMVector3Normalize(nVec);
+
+            // Compute handedness
+            float handedness = (XMVectorGetX(XMVector3Dot(XMVector3Cross(nVec, tVec), bVec)) < 0.0f) ? -1.0f : 1.0f;
+
+            vertex.tangent = { mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z, handedness };
+        } else {
+            vertex.tangent = { 1.0f, 0.0f, 0.0f, 1.0f }; // fallback
+        }
+
+        // UVs
+        if (mesh->HasTextureCoords(0)) {
+            vertex.texcoord = {
+                mesh->mTextureCoords[0][i].x,
+                mesh->mTextureCoords[0][i].y
+            };
+        } else {
+            vertex.texcoord = { 0.0f, 0.0f };
+        }
+
         vertices.push_back(vertex);
 
+        // Track mesh bounds
         minPos.x = std::min(minPos.x, mesh->mVertices[i].x);
         minPos.y = std::min(minPos.y, mesh->mVertices[i].y);
         minPos.z = std::min(minPos.z, mesh->mVertices[i].z);
@@ -140,6 +191,7 @@ std::unique_ptr<Mesh> Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         maxPos.y = std::max(maxPos.y, mesh->mVertices[i].y);
         maxPos.z = std::max(maxPos.z, mesh->mVertices[i].z);
     }
+
 
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];

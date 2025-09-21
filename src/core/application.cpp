@@ -92,8 +92,9 @@ void Application::init() {
         directCommandQueue.get(),
         swapchain->getSRVHeap(),
         // "assets/models/building1/building.obj"
-        "assets/models/cat/cat.obj"
+        // "assets/models/cat/cat.obj"
         // "assets/models/mountain1/mountain.obj"
+        "assets/models/tower1/wooden watch tower2.obj"
     );
     LOG_INFO(L"Model Resource initialized!");
 
@@ -149,19 +150,35 @@ void Application::init() {
     CD3DX12_ROOT_PARAMETER srvRootParam;
     srvRootParam.InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
+    // Texture = t1 (PS)
+    CD3DX12_DESCRIPTOR_RANGE normalSrvRange;
+    normalSrvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+    CD3DX12_ROOT_PARAMETER normalSrvParam;
+    normalSrvParam.InitAsDescriptorTable(1, &normalSrvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    // Texture = t2 (PS)
+    CD3DX12_DESCRIPTOR_RANGE specularSrvRange;
+    specularSrvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+
+    CD3DX12_ROOT_PARAMETER specularSrvParam;
+    specularSrvParam.InitAsDescriptorTable(1, &specularSrvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
     // Combine
     std::vector<D3D12_ROOT_PARAMETER> rootParams = {
         cbvMvpParam,
         cbvMaterialParam,
         cbvLightParam,
-        srvRootParam
+        srvRootParam,
+        normalSrvParam,
+        specularSrvParam
     };
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TANGENT",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
 
     auto vertexShader = Shader(L"assets/shaders/vertex.cso");
@@ -201,13 +218,15 @@ void Application::init() {
     // Initialize material
     // --------------------
     MaterialData mat;
-    mat.emissive      = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-    mat.ambient       = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-    mat.diffuse       = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    mat.specular      = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    mat.emissive = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+    mat.ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+    mat.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    mat.specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     // Typical values: 16.0f, 32.0f, 64.0f
     mat.specularPower = 64.0f;
-    mat.useTexture    = true;
+    mat.useTexture = 1;
+    mat.useNormalMap = 1;
+    mat.useSpecularMap = 1;
 
     materialBuffer->update(&mat, sizeof(MaterialData));
 
@@ -223,7 +242,7 @@ void Application::init() {
         0.0f, // innerAngle,
         0.0f, // outerAngle
         { 1.0f, 1.0f, 1.0f }, // color -> light color (sun or moon)
-        0.0f // intensity
+        1.0f // intensity
     );
 
     lighting1->setLight(
@@ -235,7 +254,7 @@ void Application::init() {
         0.0f, 
         0.0f,
         { 1.0f, 0.9f, 0.8f },
-        50.0f
+        1.0f
     );
 
     lighting1->updateGPU();

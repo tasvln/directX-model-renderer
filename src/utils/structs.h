@@ -23,7 +23,7 @@ struct WindowConfig {
 struct alignas(16) VertexStruct {
     XMFLOAT4 position;
     XMFLOAT3 normal;
-    XMFLOAT3 tangent;
+    XMFLOAT4 tangent;
     XMFLOAT2 texcoord;
 };
 
@@ -36,8 +36,8 @@ struct alignas(256) MVPConstantStruct
 // Lighting Struct
 enum class LightType : int {
     Directional = 0,
-    Point       = 1,
-    Spot        = 2
+    Point = 1,
+    Spot = 2
 };
 
 struct alignas(16) Light
@@ -66,11 +66,13 @@ struct alignas(16) LightBufferData
 
 struct alignas(16) MaterialData
 {
-    XMFLOAT4 emissive;       // 16 bytes
-    XMFLOAT4 ambient;        // 16 bytes
-    XMFLOAT4 diffuse;        // 16 bytes
-    XMFLOAT4 specular;       // 16 bytes
-    float specularPower;  // 4 bytes
-    float useTexture;     // 4 bytes
-    XMFLOAT2 padding;    // 8 bytes to match 16-byte alignment
+    XMFLOAT4 emissive; 
+    XMFLOAT4 ambient; 
+    XMFLOAT4 diffuse; 
+    XMFLOAT4 specular; 
+    float specularPower; 
+    float useTexture; 
+    float useNormalMap; 
+    float useSpecularMap; 
+    XMFLOAT2 padding; 
 };
