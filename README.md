@@ -11,6 +11,8 @@ https://github.com/user-attachments/assets/654a5db4-e9b5-4220-ad5a-4494431a18f5
 
 <img width="1440" height="725" alt="Screenshot 2025-10-08 135931" src="https://github.com/user-attachments/assets/262e4e3f-4d47-4745-b85d-fcddafdfdaad" />
 
+https://github.com/user-attachments/assets/03536e32-5c7d-45ce-b04d-8c2db38248da
+
 ---
 
 ## Features
@@ -22,7 +24,7 @@ https://github.com/user-attachments/assets/654a5db4-e9b5-4220-ad5a-4494431a18f5
 - **Phong** and **Blinn-Phong** shading models  
 - **Shadow Mapping** with depth texture rendering  
 - **Normal and Parallax Mapping** for surface detail  
-- Enhanced camera system (orbit + free movement)  
+- Enhanced camera system  
 - Custom logger for categorized runtime messages (info, warn, error)  
 - FPS counter displayed in the window title  
 
